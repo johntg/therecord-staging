@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Reading View</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg: #f6f1e8;
+        --card: #fffdf8;
+        --text: #1f2933;
+        --muted: #667085;
+        --accent: #b3261e;
+        --border: #e4ddd1;
+        --soft: #f3eadc;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.4;
+        font-size: 17px;
+      }
+
+      .container {
+        max-width: 860px;
+        margin: 36px auto;
+        padding: 10px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      button {
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 34px 38px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      }
+
+      h1 {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 1.65rem;
+        line-height: 1.25;
+        margin: 0 0 18px;
+        padding-bottom: 12px;
+        border-bottom: 3px solid var(--accent);
+        color: var(--accent);
+      }
+
+      h2 {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 1.2rem;
+        margin: 30px 0 10px;
+        padding: 10px 12px;
+        background: var(--soft);
+        border-left: 5px solid var(--accent);
+        border-radius: 10px;
+      }
+
+      p {
+        margin: 14px 0;
+      }
+
+      .item {
+        margin-left: 1rem;
+        padding-left: 0.6rem;
+      }
+
+      .spoken-line {
+        margin: 20px 0;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 0.95rem;
+      }
+
+      .name-line strong {
+        font-weight: 800;
+      }
+
+      .unit-title {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin-top: 32px;
+        margin-bottom: 10px;
+        border-bottom: 3px solid var(--accent);
+        padding-bottom: 6px;
+      }
+
+      .section-release {
+        background: #fff1f1;
+        border-left: 6px solid #c0392b;
+        padding: 12px;
+        border-radius: 10px;
+        margin-top: 16px;
+      }
+
+      .section-sustain {
+        background: #eef6ff;
+        border-left: 6px solid #2563eb;
+        padding: 12px;
+        border-radius: 10px;
+        margin-top: 16px;
+      }
+
+      .section-title {
+        font-weight: 800;
+        margin-bottom: 8px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+
+      .list-item {
+        margin-left: 12px;
+        padding-left: 6px;
+      }
+
+      .motion {
+        margin-top: 14px;
+        font-style: italic;
+      }
+
+      @media print {
+        body {
+          background: white;
+          font-size: 18px;
+        }
+        .actions {
+          display: none;
+        }
+        .container {
+          margin: 0;
+          max-width: none;
+        }
+        .card {
+          box-shadow: none;
+          border: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <div class="actions">
+        <button onclick="window.print()">🖨 Print</button>
+        <button onclick="document.body.classList.toggle('large-text')">
+          Aa Larger
+        </button>
+        <button onclick="goBackToApp()">Close</button>
+      </div>
+
+      <article class="card" id="report-content">Loading report...</article>
+    </main>
+
+    <script>
+      document
+        .querySelector(".actions button:nth-child(2)")
+        .addEventListener("click", () => {
+          const current = parseFloat(getComputedStyle(document.body).fontSize);
+          document.body.style.fontSize = current >= 24 ? "20px" : "24px";
+        });
+
+      const params = new URLSearchParams(window.location.search);
+      const reportId = String(params.get("rid") || "").trim();
+      const returnToParam = String(params.get("returnTo") || "").trim();
+
+      let handoffContent = "";
+
+      if (reportId) {
+        handoffContent = localStorage.getItem(reportId) || "";
+        localStorage.removeItem(reportId);
+      }
+
+      const content =
+        handoffContent ||
+        sessionStorage.getItem("readingViewReport") ||
+        params.get("content") ||
+        "";
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatLine(line) {
+        const safe = escapeHtml(line);
+
+        const namePositionPattern = /^(\s*\d+\.\s*)(.+?)(\s+—\s+)(.+)$/;
+        const match = safe.match(namePositionPattern);
+
+        if (match) {
+          return `${match[1]}<strong>${match[2]}</strong>${match[3]}${match[4]}`;
+        }
+
+        return safe;
+      }
+
+      function formatReport(text) {
+        const lines = text.split("\n");
+
+        let html = "";
+        let currentSection = null;
+
+        lines.forEach((line, index) => {
+          const trimmed = line.trim();
+          const next = lines[index + 1]?.trim();
+
+          if (!trimmed) {
+            html += `<div style="height:10px"></div>`;
+            return;
+          }
+
+          // UNIT HEADINGS (followed by ====)
+          if (next && next.match(/^=+$/)) {
+            html += `<div class="unit-title">${trimmed}</div>`;
+            return;
+          }
+
+          // SECTION HEADINGS
+          if (trimmed === "RELEASES") {
+            currentSection = "release";
+            html += `<div class="section-release"><div class="section-title">RELEASES</div>`;
+            return;
+          }
+
+          if (trimmed === "SUSTAININGS") {
+            currentSection = "sustain";
+            html += `</div><div class="section-sustain"><div class="section-title">SUSTAININGS</div>`;
+            return;
+          }
+
+          // LIST ITEMS
+          if (/^\d+\./.test(trimmed)) {
+            html += `<div class="list-item">${escapeHtml(trimmed)}</div>`;
+            return;
+          }
+
+          // MOTION TEXT
+          if (trimmed.startsWith("It is proposed")) {
+            html += `<div class="motion">${escapeHtml(trimmed)}</div>`;
+            return;
+          }
+
+          if (
+            trimmed.startsWith("Those in favour") ||
+            trimmed.startsWith("Those opposed")
+          ) {
+            html += `<div class="motion">${escapeHtml(trimmed)}</div>`;
+            return;
+          }
+
+          // default
+          html += `<p>${escapeHtml(trimmed)}</p>`;
+        });
+
+        // close final section if open
+        html += `</div>`;
+
+        return html;
+      }
+
+      if (content) {
+        document.getElementById("report-content").innerHTML =
+          formatReport(content);
+      } else {
+        document.getElementById("report-content").textContent =
+          "No report content.";
+      }
+
+      function getSafeReturnUrl() {
+        if (returnToParam) {
+          try {
+            const returnUrl = new URL(returnToParam, window.location.href);
+            if (returnUrl.origin === window.location.origin) {
+              return returnUrl.href;
+            }
+          } catch {
+            // ignore invalid return URL and fall back below
+          }
+        }
+
+        return new URL("./", window.location.href).href;
+      }
+
+      function goBackToApp() {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+
+        window.location.assign(getSafeReturnUrl());
+      }
+    </script>
+  </body>
+</html>
